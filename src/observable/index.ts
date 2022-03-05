@@ -5,24 +5,42 @@ import { Observer } from "../observer";
 import { OperatorFunction } from "../types";
 import { pipeFromArray } from "../utils";
 
-export class Observable<T> {
-  public readonly observer: Observer<
-    T,
-    { new (...args: any[]): Buffer & IBuffer<T> }
-  >;
+export class Observable<T> implements AsyncGenerator<T, void, T> {
+  public readonly observer: AsyncGenerator<T, void, T>;
+  private readonly buffer: IBuffer;
   constructor(
-    oberverCallback: (
-      observer: Observer<T, { new (...args: any[]): Buffer & IBuffer<T> }>
-    ) => AsyncGenerator<any, void, unknown>,
-    bufferSize?: number,
-    buffer?: { new (...args: any[]): Buffer & IBuffer<T> }
+    factory: (observer: AsyncGenerator<T, void, T>) => void,
+    bufferSize?: number
+    // buffer?: { new (...args: any[]): Buffer & IBuffer<T> }
   ) {
-    const observer = new Observer<
-      T,
-      { new (...args: any[]): Buffer & IBuffer<T> }
-    >(bufferSize, buffer);
-    this.observer = observer;
-    oberverCallback(observer);
+    this.observer = (async function* () {
+      let data: T | undefined = undefined;
+      while (true) {
+        const next: T = yield data as T;
+
+        if (next) data = next;
+      }
+    })();
+    factory(this.observer);
+    this.observer.next();
+    this.buffer = new FifoBuffer(bufferSize ? bufferSize : 1_000);
+
+    // const observer = new Observer<
+    //   T,
+    //   { new (...args: any[]): Buffer & IBuffer<T> }
+    // >(bufferSize, buffer);
+    // this.observer = observer;
+    // oberverCallback(observer);
+  }
+  next(...args: [] | [T]): Promise<IteratorResult<void, T>> {}
+  return(value: void | PromiseLike<void>): Promise<IteratorResult<T, void>> {
+    throw new Error("Method not implemented.");
+  }
+  throw(e: any): Promise<IteratorResult<T, void>> {
+    throw new Error("Method not implemented.");
+  }
+  [Symbol.asyncIterator](): AsyncGenerator<T, void, unknown> {
+    throw new Error("Method not implemented.");
   }
 
   pipe(): Observable<T>;
@@ -111,7 +129,7 @@ export class Observable<T> {
 }
 
 const obs = new Observable<{}>(
-  (obs) => {
+  async function* (obs) {
     obs.next({});
     obs.complete();
   },
