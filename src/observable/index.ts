@@ -1,46 +1,30 @@
+import { EventEmitter } from "events";
+import { promisify } from "util";
 import { FifoBuffer } from "../buffers/fifo.buffer";
-import { Buffer } from "../buffers/buffer";
-import { IBuffer } from "../interfaces/buffer.interface";
-import { Observer } from "../observer";
+
 import { OperatorFunction } from "../types";
 import { pipeFromArray } from "../utils";
 
-export class Observable<T> implements AsyncGenerator<T, void, T> {
-  public readonly observer: AsyncGenerator<T, void, T>;
-  private readonly buffer: IBuffer;
-  constructor(
-    factory: (observer: AsyncGenerator<T, void, T>) => void,
-    bufferSize?: number
-    // buffer?: { new (...args: any[]): Buffer & IBuffer<T> }
-  ) {
-    this.observer = (async function* () {
-      let data: T | undefined = undefined;
-      while (true) {
-        const next: T = yield data as T;
-
-        if (next) data = next;
-      }
-    })();
-    factory(this.observer);
-    this.observer.next();
-    this.buffer = new FifoBuffer(bufferSize ? bufferSize : 1_000);
-
-    // const observer = new Observer<
-    //   T,
-    //   { new (...args: any[]): Buffer & IBuffer<T> }
-    // >(bufferSize, buffer);
-    // this.observer = observer;
-    // oberverCallback(observer);
-  }
-  next(...args: [] | [T]): Promise<IteratorResult<void, T>> {}
-  return(value: void | PromiseLike<void>): Promise<IteratorResult<T, void>> {
-    throw new Error("Method not implemented.");
-  }
-  throw(e: any): Promise<IteratorResult<T, void>> {
-    throw new Error("Method not implemented.");
-  }
-  [Symbol.asyncIterator](): AsyncGenerator<T, void, unknown> {
-    throw new Error("Method not implemented.");
+export class Observable<T> {
+  private readonly observer = new EventEmitter();
+  private readonly buffer = new FifoBuffer<T>(1000);
+  private readonly factory: AsyncGenerator<T, void, void>;
+  constructor(factory: () => AsyncGenerator<T, void, void>) {
+    // this.observer = (async function* () {
+    //   const data: T[] = [];
+    //   let next: T | undefined = undefined;
+    //   while (true) {
+    //     next = yield data[0];
+    //     if (data.length > 0 && !next) {
+    //       data.shift();
+    //     }
+    //     if (next) {
+    //       data.push(next);
+    //     }
+    //   }
+    // })();
+    // this.observer.next();
+    this.factory = factory();
   }
 
   pipe(): Observable<T>;
@@ -119,23 +103,52 @@ export class Observable<T> implements AsyncGenerator<T, void, T> {
   ): Observable<unknown>;
 
   pipe(...operators: OperatorFunction<any, any>[]): Observable<any> {
-    return pipeFromArray(operators)(this);
+    return pipeFromArray<any, any>(operators)(this);
   }
-  async *flow(): AsyncGenerator<T, void, unknown> {
-    for await (const elem of this.observer) {
-      yield elem;
+  async *subscribe() {
+    let runningRead = true;
+    let runningWrite = true;
+    const runner = async () => {
+      while (runningWrite) {
+        const data = await this.factory.next();
+        if (data.done) {
+          runningWrite = false;
+        } else {
+          const permitted = this.buffer.write(data.value);
+          console.log(permitted);
+          this.observer.emit("drain");
+          if (!permitted) {
+            await promisify(this.observer.once.bind(this.observer))("resume");
+            this.buffer.write(data.value);
+          }
+        }
+      }
+    };
+    runner();
+    while (runningRead) {
+      const data = this.buffer.read();
+      this.observer.emit("resume");
+      if (data) {
+        yield data;
+      } else {
+        if (runningWrite) {
+          await promisify(this.observer.once.bind(this.observer))("drain");
+          yield this.buffer.read();
+        } else {
+          runningRead = false;
+        }
+      }
     }
   }
 }
 
-const obs = new Observable<{}>(
-  async function* (obs) {
-    obs.next({});
-    obs.complete();
-  },
-  1000,
-  FifoBuffer
-);
-obs.pipe((input: Observable<{}>) => {
-  return input;
-});
+// const obs = new Observable(async function* () {
+//   for (let index = 0; index < 100; index++) {
+//     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+//     yield index;
+//     yield "ok";
+//   }
+// });
+// obs.pipe((input: Observable<{}>) => {
+//   return input;
+// });

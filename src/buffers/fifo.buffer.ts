@@ -5,7 +5,7 @@ export class FifoBuffer<T> extends Buffer implements IBuffer<T> {
   private data: T[] = [];
 
   read(): T | undefined {
-    return this.data.shift();
+    return this.data.pop();
   }
   write(element: T): boolean {
     if (this.size() < this.length) {
