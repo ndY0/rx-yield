@@ -1,13 +1,14 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const map: <T, R>(factory: (element: T) => R) => OperatorFunction<T, R> =
-  <T, R>(factory: (element: T) => R) =>
+const tap: <T>(factory: (element: T) => void) => OperatorFunction<T, T> =
+  <T>(factory: (element: T) => void) =>
   (input: Observable<T>) => {
-    return new Observable<R>(async function* () {
+    return new Observable<T>(async function* () {
       for await (const elem of input.subscribe()) {
         if (elem !== undefined) {
-          yield factory(elem);
+          factory(elem);
+          yield elem;
         } else {
           break;
         }
@@ -15,4 +16,4 @@ const map: <T, R>(factory: (element: T) => R) => OperatorFunction<T, R> =
     });
   };
 
-export { map };
+export { tap };

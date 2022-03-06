@@ -10,20 +10,6 @@ export class Observable<T> {
   private readonly buffer = new FifoBuffer<T>(1000);
   private readonly factory: AsyncGenerator<T, void, void>;
   constructor(factory: () => AsyncGenerator<T, void, void>) {
-    // this.observer = (async function* () {
-    //   const data: T[] = [];
-    //   let next: T | undefined = undefined;
-    //   while (true) {
-    //     next = yield data[0];
-    //     if (data.length > 0 && !next) {
-    //       data.shift();
-    //     }
-    //     if (next) {
-    //       data.push(next);
-    //     }
-    //   }
-    // })();
-    // this.observer.next();
     this.factory = factory();
   }
 
@@ -115,7 +101,6 @@ export class Observable<T> {
           runningWrite = false;
         } else {
           const permitted = this.buffer.write(data.value);
-          console.log(permitted);
           this.observer.emit("drain");
           if (!permitted) {
             await promisify(this.observer.once.bind(this.observer))("resume");
