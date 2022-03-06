@@ -6,11 +6,9 @@ import { OperatorFunction } from "../types";
 import { pipeFromArray } from "../utils";
 
 export class Observable<T> {
-  private readonly observer = new EventEmitter();
-  private readonly buffer = new FifoBuffer<T>(1000);
-  private readonly factory: AsyncGenerator<T, void, void>;
+  protected readonly factory: () => AsyncGenerator<T, void, void>;
   constructor(factory: () => AsyncGenerator<T, void, void>) {
-    this.factory = factory();
+    this.factory = factory;
   }
 
   pipe(): Observable<T>;
@@ -92,33 +90,45 @@ export class Observable<T> {
     return pipeFromArray<any, any>(operators)(this);
   }
   async *subscribe() {
+    const observer = new EventEmitter();
+    const buffer = new FifoBuffer<T>(1000);
+    const source = this.factory();
     let runningRead = true;
     let runningWrite = true;
+    let error: any = undefined;
     const runner = async () => {
-      while (runningWrite) {
-        const data = await this.factory.next();
-        if (data.done) {
-          runningWrite = false;
-        } else {
-          const permitted = this.buffer.write(data.value);
-          this.observer.emit("drain");
-          if (!permitted) {
-            await promisify(this.observer.once.bind(this.observer))("resume");
-            this.buffer.write(data.value);
+      try {
+        while (runningWrite) {
+          const data = await source.next();
+          if (data.done) {
+            runningWrite = false;
+          } else {
+            const permitted = buffer.write(data.value);
+            observer.emit("drain");
+            if (!permitted) {
+              await promisify(observer.once.bind(observer))("resume");
+              buffer.write(data.value);
+            }
           }
         }
+      } catch (e) {
+        error = e;
+        observer.emit("drain");
       }
     };
     runner();
     while (runningRead) {
-      const data = this.buffer.read();
-      this.observer.emit("resume");
+      const data = buffer.read();
+      observer.emit("resume");
       if (data) {
         yield data;
       } else {
         if (runningWrite) {
-          await promisify(this.observer.once.bind(this.observer))("drain");
-          yield this.buffer.read();
+          await promisify(observer.once.bind(observer))("drain");
+          if (error) {
+            throw error;
+          }
+          yield buffer.read();
         } else {
           runningRead = false;
         }
@@ -126,14 +136,3 @@ export class Observable<T> {
     }
   }
 }
-
-// const obs = new Observable(async function* () {
-//   for (let index = 0; index < 100; index++) {
-//     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-//     yield index;
-//     yield "ok";
-//   }
-// });
-// obs.pipe((input: Observable<{}>) => {
-//   return input;
-// });

@@ -1,22 +1,19 @@
 import { Observable } from "../observable";
+import { ShareObservable } from "../observable/shareable";
 import { OperatorFunction } from "../types";
 
-const last: <T>() => OperatorFunction<T, T | void> =
+const share: <T>() => OperatorFunction<T, T> =
   <T>() =>
   (input: Observable<T>) => {
-    return new Observable<T>(async function* () {
-      let last: T | undefined;
+    return new ShareObservable<T>(async function* () {
       for await (const elem of input.subscribe()) {
         if (elem !== undefined) {
-          last = elem;
+          yield elem;
         } else {
           break;
         }
       }
-      if (last) {
-        yield last;
-      }
     });
   };
 
-export { last };
+export { share };
