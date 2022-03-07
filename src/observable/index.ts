@@ -91,7 +91,7 @@ export class Observable<T> {
   }
   async *subscribe() {
     const observer = new EventEmitter();
-    const buffer = new FifoBuffer<T>(1000);
+    const buffer = new FifoBuffer<T>(10);
     const source = this.factory();
     let runningRead = true;
     let runningWrite = true;

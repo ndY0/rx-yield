@@ -13,4 +13,11 @@ const pipeFromArray = <T, R>(
   };
 };
 
-export { pipeFromArray };
+const promisify =
+  <U, R>(func: (args: U, callback: (res: R) => void) => void) =>
+  (arg: U) =>
+    new Promise<R>((resolve) => {
+      func(arg, (res) => resolve(res));
+    });
+
+export { pipeFromArray, promisify };
