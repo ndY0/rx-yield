@@ -11,9 +11,15 @@ import { EventEmitter } from "events";
 import { IBuffer } from "./interfaces/buffer.interface";
 import { mergeMap } from "./operators/mergeMap";
 import { first } from "./operators/first";
+import { bufferCount } from "./operators/bufferCount";
+import { audit } from "./operators/audit";
+import { bufferWhen } from "./operators/bufferWhen";
+import { concatMapTo } from "./operators/concatMapTo";
+import { count } from "./operators/count";
+import { defaultIfEmpty } from "./operators/defaultIfEmpty";
 
 const obs = new Observable(async function* () {
-  for (let index = 0; index < 100; index++) {
+  for (let index = 0; index < 200; index++) {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
     // if (index === 10) {
     //   throw new Error("je suis une erreur ! ");
@@ -21,38 +27,22 @@ const obs = new Observable(async function* () {
     yield index;
   }
 }).pipe(
-  map((elem: number) => `${elem}`)
-  // mergeMap(
-  //   (elem: string) =>
-  //     new Observable(async function* () {
-  //       for (let index = 0; index < 3; index++) {
-  //         await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
-  //         yield `${elem}_${index}`;
-  //       }
+  map((elem: number) => `${elem}`),
+  defaultIfEmpty({})
+  // bufferWhen(
+  //   () =>
+  //     new Observable<number>(async function* () {
+  //       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+  //       yield 0;
   //     })
-  // ),
-  // first()
-
-  // share()
-  // catchError(
-  //   (e: Error) => throwError(() => e)
-  // new Observable(async function* () {
-  //   for (let index = 0; index < 3; index++) {
-  //     await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
-  //     yield `${e.name}_${index}`;
-  //   }
-  // })
   // )
-  // last()
-  // delay(1000),
-  // tap((test: string) => console.log(test)),
-  // throttle(2000)
 );
 
 const test = async (id: number) => {
   try {
     for await (const elem of obs.subscribe()) {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+      console.log(elem);
       if (elem === undefined) {
         break;
       }
@@ -61,6 +51,7 @@ const test = async (id: number) => {
   } catch (e) {
     console.log(`received an error in consumer ${id} : `, e);
   }
+  await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
 };
 
 const testbis = async (id: number) => {

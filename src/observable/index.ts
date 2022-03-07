@@ -96,11 +96,15 @@ export class Observable<T> {
     let runningRead = true;
     let runningWrite = true;
     let error: any = undefined;
+    let init = true;
     const runner = async () => {
       try {
         while (runningWrite) {
           const data = await source.next();
           if (data.done) {
+            if (init) {
+              observer.emit("drain");
+            }
             runningWrite = false;
           } else {
             const permitted = buffer.write(data.value);
