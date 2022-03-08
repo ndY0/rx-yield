@@ -24,6 +24,7 @@
   "homepage": "https://github.com/ndY0/rx-yield#readme",
   "devDependencies": {
     "eslint": "^8.10.0",
+    "jest": "^27.5.1",
     "prettier": "^2.5.1",
     "ts-node": "^10.6.0",
     "typescript": "^4.6.2"
