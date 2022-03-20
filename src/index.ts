@@ -18,21 +18,30 @@ import { concatMapTo } from "./operators/concatMapTo";
 import { count } from "./operators/count";
 import { defaultIfEmpty } from "./operators/defaultIfEmpty";
 import { Subject } from "./subject";
+import { bufferTime } from "./operators/bufferTime";
+import { every } from "./operators/every";
+import { exhaustMap } from "./operators/exhaustMap";
+import { finalize } from "./operators/finalize";
+import { ignoreElements } from "./operators/ignoreElements";
+import { max } from "./operators/max";
+import { mergeWith } from "./operators/mergeWith";
 
-const subject = new Subject<number>();
-// const obs = new Observable(async function* () {
-//   await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-//   for (let index = 0; index < 200; index++) {
-//     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-//     // if (index === 10) {
-//     //   throw new Error("je suis une erreur ! ");
-//     // }
-//     yield index;
-//   }
-// })
-const obs = subject.pipe(
-  map((elem: number) => `${elem}`),
-  share(false)
+const subject = new Subject<string>();
+const obs = new Observable(async function* () {
+  // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
+  for (let index = 0; index < 100; index++) {
+    // console.log(index);
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
+    // if (index === 10) {
+    //   yield ''
+    // throw new Error("je suis une erreur ! ");
+    // }
+    yield index;
+  }
+});
+const obs2 = obs.pipe(
+  mergeWith(obs, obs, obs, obs, obs)
+  // share(false)
   // bufferWhen(
   //   () =>
   //     new Observable<number>(async function* () {
@@ -45,7 +54,7 @@ const obs = subject.pipe(
 const test = async (id: number) => {
   try {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-    for await (const elem of obs.subscribe()) {
+    for await (const elem of obs2.subscribe()) {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
       if (elem === undefined) {
         break;
@@ -73,11 +82,14 @@ const testbis = async (id: number) => {
 
 const runSubject = async () => {
   for (let index = 0; index < 100; index++) {
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-    await subject.next(index);
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
+    if (index === 30) {
+      subject.next("");
+    }
+    await subject.next("test");
   }
 };
 
 test(1);
-testbis(2);
-runSubject();
+// testbis(2);
+// runSubject();
