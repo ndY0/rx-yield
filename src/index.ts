@@ -25,6 +25,9 @@ import { finalize } from "./operators/finalize";
 import { ignoreElements } from "./operators/ignoreElements";
 import { max } from "./operators/max";
 import { mergeWith } from "./operators/mergeWith";
+import { retry } from "./operators/retry";
+import { sampleTime } from "./operators/sampleTime";
+import { skip } from "./operators/skip";
 
 const subject = new Subject<string>();
 const obs = new Observable(async function* () {
@@ -33,14 +36,14 @@ const obs = new Observable(async function* () {
     // console.log(index);
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
     // if (index === 10) {
-    //   yield ''
+    //   // yield ''
     // throw new Error("je suis une erreur ! ");
     // }
     yield index;
   }
-});
-const obs2 = obs.pipe(
-  mergeWith(obs, obs, obs, obs, obs)
+}).pipe(
+  skip(10),
+  // mergeWith(obs, obs, obs, obs, obs)
   // share(false)
   // bufferWhen(
   //   () =>
@@ -54,7 +57,7 @@ const obs2 = obs.pipe(
 const test = async (id: number) => {
   try {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-    for await (const elem of obs2.subscribe()) {
+    for await (const elem of obs.subscribe()) {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
       if (elem === undefined) {
         break;
