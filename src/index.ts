@@ -31,19 +31,27 @@ import { skip } from "./operators/skip";
 import { skipWhile } from "./operators/skipWhile";
 import { switchAll } from "./operators/switchAll";
 import { switchScan } from "./operators/switchScan";
+import { takeUntil } from "./operators/takeUntil";
+import { timeInterval } from "./operators/timeInterval";
+import { timestamp } from "./operators/timestamp";
+import { windowCount } from "./operators/windowCount";
+import { windowWhen } from "./operators/windowWhen";
 
 const subject = new Subject<string>();
-const obs = new Observable(async function* () {
+const obs = new Observable<number>(async function* (throwError: (error: any) => void) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 1; index < 10; index++) {
+  for (let index = 1; index < 100; index++) {
     // let shouldThrow = false;
     // console.log(index);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 600));
-    // if (index === 2) {
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+    if (index === 64) {
     // yield ''
     // shouldThrow = true;
-    // throw new Error("je suis une erreur ! ");
-    // }
+    // throw new Error("je suis une erreur ! ")
+    // throwError(new Error("je suis une erreur ! "));
+    // return
+    }
+    console.log("sending", index)
     yield index;
     // yield new Observable(async function* () {
     //   for (let index = 0; index < 30; index++) {
@@ -57,16 +65,29 @@ const obs = new Observable(async function* () {
     // });
   }
 }).pipe(
-  switchScan(
-    (acc: number, curr: number) =>
-      new Observable(async function* () {
-        await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
-        yield acc * curr;
-        await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
-        yield acc * (curr + 1);
-      }),
-    1
-  )
+  // map((elem: number) => `${elem}`),
+  // windowWhen(() => new Observable(async function* () {
+  //   for (let index = 1; index < 100; index++) {
+  //     await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
+  //     yield index;
+  //   }
+  // })),
+  // map((elem: number) => `prefix_${elem}`),
+  // windowWhen(() => new Observable(async function* () {
+  //   while(true) {
+  //     await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
+  //     yield true;
+  //   }
+  // })),
+  map((elem: number) => {
+    return new Observable(async function*() {
+      for (let index = 0; index < 3; index++) {
+        yield `${elem} + ${index}`;
+        
+      }
+    })
+  }),
+  switchAll()
   // mergeWith(obs, obs, obs, obs, obs)
   // share(false)
   // bufferWhen(
@@ -82,8 +103,7 @@ const test = async (id: number) => {
   try {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
     for await (const elem of obs.subscribe()) {
-      console.log(elem);
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
       if (elem === undefined) {
         break;
       }

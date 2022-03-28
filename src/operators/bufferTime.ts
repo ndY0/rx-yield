@@ -4,34 +4,38 @@ import { OperatorFunction } from "../types";
 const bufferTime: <T>(bufferTimeSpan: number) => OperatorFunction<T, T[]> =
   <T>(bufferTimeSpan: number) =>
   (input: Observable<T>) => {
-    return new Observable<T[]>(async function* () {
+    return new Observable<T[]>(async function* (throwError: (error: any) => void) {
       let buffer: T[] = [];
       let flush = false;
       let promise: Promise<any> | undefined = undefined;
-      for await (const elem of input.subscribe()) {
-        if (flush) {
-          yield buffer;
-          promise = undefined;
-          flush = false;
-          buffer = [];
-        }
-        if (elem !== undefined) {
-          if (!promise) {
-            promise = new Promise<void>((resolve) => {
-              setTimeout(() => {
-                resolve();
-              }, bufferTimeSpan);
-            }).then(() => {
-              flush = true;
-            });
+      try {
+        for await (const elem of input.subscribe()) {
+          if (flush) {
+            yield buffer;
+            promise = undefined;
+            flush = false;
+            buffer = [];
           }
-          buffer.push(elem);
-        } else {
-          break;
+          if (elem !== undefined) {
+            if (!promise) {
+              promise = new Promise<void>((resolve) => {
+                setTimeout(() => {
+                  resolve();
+                }, bufferTimeSpan);
+              }).then(() => {
+                flush = true;
+              });
+            }
+            buffer.push(elem);
+          } else {
+            break;
+          }
         }
-      }
-      if (buffer) {
-        yield buffer;
+        if (buffer) {
+          yield buffer;
+        }
+      } catch(e) {
+        throwError(e);
       }
     });
   };

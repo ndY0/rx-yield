@@ -4,16 +4,20 @@ import { OperatorFunction } from "../types";
 const count: <T>() => OperatorFunction<T, number> =
   <T>() =>
   (input: Observable<T>) => {
-    return new Observable<number>(async function* () {
+    return new Observable<number>(async function* (throwError: (error: any) => void) {
       let count = 0;
-      for await (const elem of input.subscribe()) {
-        if (elem !== undefined) {
-          count += 1;
-        } else {
-          break;
+      try {
+        for await (const elem of input.subscribe()) {
+          if (elem !== undefined) {
+            count += 1;
+          } else {
+            break;
+          }
         }
+        yield count;
+      } catch(e) {
+        throwError(e);
       }
-      yield count;
     });
   };
 

@@ -6,51 +6,64 @@ const exhaustMap: <T, E>(
 ) => OperatorFunction<T, E> =
   <T, E>(factory: (element: T) => Observable<E>) =>
   (input: Observable<T>) => {
-    return new Observable<E>(async function* () {
+    return new Observable<E>(async function* (
+      throwError: (error: any) => void
+    ) {
       let isRunningOutter = true;
       let isRunningInner = true;
       let outterCurrentValue: T | undefined = undefined;
-      let runningOutter: Promise<IteratorResult<Awaited<T> | undefined, void>> | undefined = undefined;
+      let runningOutter:
+        | Promise<IteratorResult<Awaited<T> | undefined, void>>
+        | undefined = undefined;
       let runningOutterDone = false;
       const outter = input.subscribe();
-      const { done, value } = await outter.next();
-      if (! done && value !== undefined) {
-        console.log(value, done, "in init")
-        outterCurrentValue = value
+      const outterPromise = outter.next();
+      outterPromise.catch((e) => throwError(e));
+      const { done, value } = await outterPromise;
+      if (!done && value !== undefined) {
+        outterCurrentValue = value;
         while (isRunningOutter) {
-          console.log(outterCurrentValue, "outter current value")
-          const innerRunner = factory(outterCurrentValue).subscribe()
-          runningOutter = outter.next().then((next: IteratorResult<Awaited<T> | undefined, void>) => {
-            if(next.value) {
-              outterCurrentValue = next.value
+          const innerRunner = factory(outterCurrentValue).subscribe();
+          const outterPromise = outter.next();
+          outterPromise.catch((e) => throwError(e));
+          runningOutter = outterPromise.then(
+            (next: IteratorResult<Awaited<T> | undefined, void>) => {
+              if (next.value) {
+                outterCurrentValue = next.value;
+              }
+              if (next.done) {
+                isRunningOutter = false;
+              }
+              runningOutterDone = true;
+              return next;
             }
-            if(next.done) {
-              isRunningOutter = false;
-            }
-            runningOutterDone = true;
-            return next
-          });
-          while(isRunningInner) {
-            const test = await innerRunner.next();
-            if(runningOutterDone) {
-              runningOutter = outter.next().then((next: IteratorResult<Awaited<T> | undefined, void>) => {
-                if(next.value) {
-                  outterCurrentValue = next.value
+          );
+          while (isRunningInner) {
+            const innerPromise = innerRunner.next();
+            innerPromise.catch((e) => throwError(e));
+            const innerValue = await innerPromise;
+            if (runningOutterDone) {
+              const outterPromise = outter.next();
+              outterPromise.catch((e) => throwError(e));
+              runningOutter = outterPromise.then(
+                (next: IteratorResult<Awaited<T> | undefined, void>) => {
+                  if (next.value) {
+                    outterCurrentValue = next.value;
+                  }
+                  if (next.done) {
+                    isRunningOutter = false;
+                  }
+                  runningOutterDone = true;
+                  return next;
                 }
-                if(next.done) {
-                  isRunningOutter = false;
-                }
-                runningOutterDone = true;
-                return next
-              });
+              );
             }
-            if(test.done) {
+            if (innerValue.done) {
               isRunningInner = false;
             } else {
-              yield test.value as E
+              yield innerValue.value as E;
             }
           }
-          console.log(isRunningOutter, "is running main");
           isRunningInner = true;
         }
       }

@@ -7,29 +7,33 @@ const bufferCount: <T>(
 ) => OperatorFunction<T, T[]> =
   <T>(bufferSize: number, bufferEvery?: number) =>
   (input: Observable<T>) => {
-    return new Observable<T[]>(async function* () {
+    return new Observable<T[]>(async function* (throwError: (error: any) => void) {
       let buffer: T[] = [];
       let passed = bufferEvery;
-      for await (const elem of input.subscribe()) {
-        if (passed && passed > 0) {
-          passed -= 1;
-          continue;
-        }
-        if (elem !== undefined) {
-          if (buffer.length < bufferSize - 1) {
-            buffer.push(elem);
-          } else {
-            buffer.push(elem);
-            yield buffer;
-            buffer = [];
-            passed = bufferEvery;
+      try {
+        for await (const elem of input.subscribe()) {
+          if (passed && passed > 0) {
+            passed -= 1;
+            continue;
           }
-        } else {
-          break;
+          if (elem !== undefined) {
+            if (buffer.length < bufferSize - 1) {
+              buffer.push(elem);
+            } else {
+              buffer.push(elem);
+              yield buffer;
+              buffer = [];
+              passed = bufferEvery;
+            }
+          } else {
+            break;
+          }
         }
-      }
-      if (buffer.length > 0) {
-        yield buffer;
+        if (buffer.length > 0) {
+          yield buffer;
+        }
+      } catch(e) {
+        throwError(e);
       }
     });
   };

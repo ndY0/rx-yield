@@ -5,8 +5,8 @@ const throwError: <E extends Error>(factory: () => E) => Observable<void> = <
 >(
   factory: () => E
 ) =>
-  new Observable<void>(async function* () {
-    throw factory();
+  new Observable<void>(async function* (throwError: (error: any) => void) {
+    throwError(factory());
   });
 
 export { throwError };

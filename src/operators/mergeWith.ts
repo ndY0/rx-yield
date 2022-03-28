@@ -86,7 +86,7 @@ function mergeWith<T, E, F, G, H, I, J, K, L, M, N>(
 
 function mergeWith<T>(...sources: Observable<any>[]): OperatorFunction<T, any> {
   return (input: Observable<T>) => {
-    return new Observable<any>(async function* () {
+    return new Observable<any>(async function* (throwError: (error: any) => void) {
       const innerCurrentValue: Map<number, any | undefined> = new Map<
         number,
         any | undefined
@@ -109,7 +109,7 @@ function mergeWith<T>(...sources: Observable<any>[]): OperatorFunction<T, any> {
 
           resolve(res);
 
-        })
+        }).catch((err) => throwError(err))
       )
       const innerRunner = new Map([input, ...sources].map((source: Observable<any>, index) =>
       [index, source.subscribe()]

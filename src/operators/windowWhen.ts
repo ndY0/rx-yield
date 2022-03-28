@@ -1,22 +1,25 @@
 import { Observable } from "../observable";
+import { Subject } from "../subject";
 import { OperatorFunction } from "../types";
 
-const bufferWhen: <T>(
+const windowWhen: <T>(
   factory: () => Observable<any>
-) => OperatorFunction<T, T[]> =
+) => OperatorFunction<T, Observable<T>> =
   <T>(factory: () => Observable<any>) =>
   (input: Observable<T>) => {
-    return new Observable<T[]>(async function* (throwError: (error: any) => void) {
-      let buffer: T[] = [];
+    return new Observable<Observable<T>>(async function* (throwError: (error: any) => void) {
+      let innerSubject = new Subject<T>();
       let flush = false;
       let promise: Promise<any> | undefined = undefined;
+      yield innerSubject;
       try {
         for await (const elem of input.subscribe()) {
           if (flush) {
-            yield buffer;
+            innerSubject.complete();
+            innerSubject = new Subject<T>();
+            yield innerSubject;
             promise = undefined;
             flush = false;
-            buffer = [];
           }
           if (elem !== undefined) {
             if (!promise) {
@@ -27,18 +30,17 @@ const bufferWhen: <T>(
                   flush = true;
                 });
             }
-            buffer.push(elem);
+            await innerSubject.next(elem);
           } else {
             break;
           }
         }
-        if (buffer) {
-          yield buffer;
-        }
-      } catch(e) {
+        innerSubject.complete();
+      } catch (e) {
+        innerSubject.error(e);
         throwError(e);
       }
     });
   };
 
-export { bufferWhen };
+export { windowWhen };

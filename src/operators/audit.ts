@@ -6,27 +6,31 @@ const audit: <T>(
 ) => OperatorFunction<T, T> =
   <T>(factory: (element: T) => Observable<any>) =>
   (input: Observable<T>) => {
-    return new Observable<T>(async function* () {
+    return new Observable<T>(async function* (throwError: (error: any) => void) {
       let last: T | undefined = undefined;
       let promise: Promise<any> | undefined = undefined;
-      for await (const elem of input.subscribe()) {
-        if (last) {
-          yield last;
-          promise = undefined;
-          last = undefined;
-        }
-        if (elem !== undefined) {
-          if (!promise) {
-            promise = factory(elem)
-              .subscribe()
-              .next()
-              .then(() => {
-                last = elem;
-              });
+      try {
+        for await (const elem of input.subscribe()) {
+          if (last) {
+            yield last;
+            promise = undefined;
+            last = undefined;
           }
-        } else {
-          break;
+          if (elem !== undefined) {
+            if (!promise) {
+              promise = factory(elem)
+                .subscribe()
+                .next()
+                .then(() => {
+                  last = elem;
+                });
+            }
+          } else {
+            break;
+          }
         }
+      } catch(e) {
+        throwError(e);
       }
     });
   };

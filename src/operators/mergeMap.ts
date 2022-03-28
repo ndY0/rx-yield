@@ -6,19 +6,25 @@ const mergeMap: <T, E>(
 ) => OperatorFunction<T, E> =
   <T, E>(factory: (element: T) => Observable<E>) =>
   (input: Observable<T>) => {
-    return new Observable<E>(async function* () {
-      for await (const elem of input.subscribe()) {
-        if (elem !== undefined) {
-          for await (const innerElem of factory(elem).subscribe()) {
-            if (innerElem !== undefined) {
-              yield innerElem;
-            } else {
-              break;
+    return new Observable<E>(async function* (
+      throwError: (error: any) => void
+    ) {
+      try {
+        for await (const elem of input.subscribe()) {
+          if (elem !== undefined) {
+            for await (const innerElem of factory(elem).subscribe()) {
+              if (innerElem !== undefined) {
+                yield innerElem;
+              } else {
+                break;
+              }
             }
+          } else {
+            break;
           }
-        } else {
-          break;
         }
+      } catch (e) {
+        throwError(e);
       }
     });
   };

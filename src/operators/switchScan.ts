@@ -9,11 +9,10 @@ const switchScan: <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: 
     ) =>
         runner.next()
         
-    return new Observable<R>(async function* () {
-      let error: any | undefined = undefined;
+    return new Observable<R>(async function* (throwError: (error: any) => void) {
       let accumulated: R | undefined = undefined
       let isRunningOutter = true;
-      let isRunningInner = true;
+      let isRunningInner = false;
       let outterValue: T | undefined = undefined;
       let innerValue: R | undefined = undefined;
       const outterRunner = input.subscribe();
@@ -30,12 +29,12 @@ const switchScan: <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: 
           outterValue = res.value;
         }
         return res.value
+      }).catch((e) => {
+        isRunningOutter = false;
+        throwError(e)
       });
       let innerPromise: Promise<any> | undefined = undefined;
       while (isRunningOutter || isRunningInner) {
-        if(error) {
-          throw error;
-        }
         if (outterValue !== undefined) {
           innerRunner = accumulator(accumulated !== undefined ? accumulated :  seed, outterValue).subscribe();
           isRunningInner = true
@@ -50,9 +49,13 @@ const switchScan: <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: 
               outterValue = res.value;
             }
             return res.value
-          }).catch((e) => error = e);
+          }).catch((e) => {
+            isRunningOutter = false;
+            throwError(e)
+          });
         }
-        if (innerRunner && !innerPromise) {
+        if (innerRunner && innerValue === undefined) {
+          isRunningInner = true
           innerPromise = buildPromise(innerRunner).then((res) => {
             if (res.done) {
               isRunningInner = false;
@@ -65,13 +68,24 @@ const switchScan: <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: 
               innerPromise = undefined;
             }
             return res.value
-          }).catch((e) => error = e);
+          }).catch((e) => {
+            isRunningInner = false;
+            throwError(e)
+          });
         }
         if (innerValue !== undefined) {
           yield innerValue;
           innerValue = undefined;
         }
-        await Promise.any([innerPromise, outterPromise].filter((promise) => promise !== undefined));
+        if(outterPromise !== undefined && innerPromise !== undefined) {
+          await Promise.any([innerPromise, outterPromise])
+        }
+        if(isRunningInner && innerPromise === undefined && outterPromise !== undefined) {
+          continue;
+        }
+        if(! isRunningInner && outterPromise !== undefined) {
+          await outterPromise
+        }
       }
     });
   };

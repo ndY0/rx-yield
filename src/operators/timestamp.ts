@@ -1,19 +1,16 @@
 import { Observable } from "../observable";
-import { OperatorFunction } from "../types";
+import { OperatorFunction, TimeInterval, Timestamp } from "../types";
 
-const throttle: <T>(throttle: number) => OperatorFunction<T, T> =
-  <T>(throttle: number) =>
+const timestamp: <T>() => OperatorFunction<T, Timestamp<T>> =
+  <T>() =>
   (input: Observable<T>) => {
-    return new Observable<T>(async function* (
+    return new Observable<Timestamp<T>>(async function* (
       throwError: (error: any) => void
     ) {
       try {
         for await (const elem of input.subscribe()) {
-          await new Promise<void>((resolve) =>
-            setTimeout(() => resolve(), throttle)
-          );
           if (elem !== undefined) {
-            yield elem;
+            yield { value: elem, timestamp: new Date().getTime() };
           } else {
             break;
           }
@@ -24,4 +21,4 @@ const throttle: <T>(throttle: number) => OperatorFunction<T, T> =
     });
   };
 
-export { throttle };
+export { timestamp };

@@ -56,7 +56,7 @@ const share: <T>(blocking?: boolean) => OperatorFunction<T, T> = <T>(
       };
       runner();
     }
-    return new Observable<T>(async function* () {
+    return new Observable<T>(async function* (throwError: (error: any) => void) {
       subscriberCount += 1;
       const id = subscriberCount;
       let running = true;
@@ -82,7 +82,7 @@ const share: <T>(blocking?: boolean) => OperatorFunction<T, T> = <T>(
           yield data;
         } else {
           if (error) {
-            throw error;
+            throwError(error);
           }
           running = false;
         }

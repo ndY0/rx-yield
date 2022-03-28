@@ -6,9 +6,20 @@ import { OperatorFunction } from "../types";
 import { pipeFromArray } from "../utils";
 
 export class Observable<T> {
-  protected readonly factory: () => AsyncGenerator<T, void, void>;
-  constructor(factory: () => AsyncGenerator<T, void, void>) {
+  protected innerError: any | undefined = undefined;
+  protected throwError: (error: any) => void;
+  protected readonly emitter = new EventEmitter();
+  test = undefined;
+  protected readonly factory: (
+    throwError: (error: any) => void
+  ) => AsyncGenerator<T, void, void>;
+  constructor(
+    factory: (throwError: (error: any) => void) => AsyncGenerator<T, void, void>
+  ) {
     this.factory = factory;
+    this.throwError = (error: any) => {
+      this.innerError = error;
+    };
   }
 
   pipe(): Observable<T>;
@@ -91,33 +102,45 @@ export class Observable<T> {
   }
   async *subscribe() {
     const observer = new EventEmitter();
+    this.emitter.once("errored", () => {
+      observer.emit("errored");
+    });
     const buffer = new FifoBuffer<T>(10);
-    const source = this.factory();
+    const source = this.factory(this.throwError);
+    const errorPromise = new Promise<void>((resolve) =>
+      observer.once("errored", () => resolve())
+    );
     let runningRead = true;
     let runningWrite = true;
-    let error: any = undefined;
     let init = true;
     const runner = async () => {
-      try {
-        while (runningWrite) {
-          const data = await source.next();
-          if (data.done) {
-            if (init) {
-              observer.emit("drain");
-            }
-            runningWrite = false;
-          } else {
-            const permitted = buffer.write(data.value);
+      while (runningWrite) {
+        if (this.innerError) {
+          runningWrite = false;
+          continue;
+        }
+        const data = await source.next();
+        if (this.innerError) {
+          runningWrite = false;
+          observer.emit("errored");
+          continue;
+        }
+        if (data.done) {
+          if (init) {
             observer.emit("drain");
-            if (!permitted) {
-              await promisify(observer.once.bind(observer))("resume");
-              buffer.write(data.value);
-            }
+          }
+          runningWrite = false;
+        } else {
+          const permitted = buffer.write(data.value);
+          observer.emit("drain");
+          if (!permitted) {
+            await promisify(observer.once.bind(observer))("resume");
+            buffer.write(data.value);
           }
         }
-      } catch (e) {
-        error = e;
-        observer.emit("drain");
+        if (init) {
+          init = false;
+        }
       }
     };
     runner();
@@ -128,15 +151,24 @@ export class Observable<T> {
         yield data;
       } else {
         if (runningWrite) {
-          await promisify(observer.once.bind(observer))("drain");
-          if (error) {
-            throw error;
+          await Promise.any([
+            promisify(observer.once.bind(observer))("drain"),
+            errorPromise,
+          ]);
+          const dataNext = buffer.read();
+          if (dataNext) {
+            yield dataNext;
           }
-          yield buffer.read();
         } else {
           runningRead = false;
+          if (this.innerError) {
+            throw this.innerError;
+          }
         }
       }
+    }
+    if (this.innerError) {
+      throw this.innerError;
     }
   }
 }
