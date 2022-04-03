@@ -7,10 +7,10 @@ import { pipeFromArray } from "../utils";
 
 export class Observable<T> {
   protected innerError: any | undefined = undefined;
-  protected throwError: (error: any) => void;
+  private throwError: (error: any) => void;
   protected readonly emitter = new EventEmitter();
   test = undefined;
-  protected readonly factory: (
+  private readonly factory: (
     throwError: (error: any) => void
   ) => AsyncGenerator<T, void, void>;
   constructor(
@@ -105,7 +105,7 @@ export class Observable<T> {
     this.emitter.once("errored", () => {
       observer.emit("errored");
     });
-    const buffer = new FifoBuffer<T>(10);
+    const buffer = new FifoBuffer<T>();
     const source = this.factory(this.throwError);
     const errorPromise = new Promise<void>((resolve) =>
       observer.once("errored", () => resolve())

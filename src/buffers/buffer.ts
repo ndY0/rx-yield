@@ -1,3 +1,3 @@
 export abstract class Buffer {
-  constructor(protected readonly length: number) {}
+  constructor(protected readonly length: number = Infinity) {}
 }

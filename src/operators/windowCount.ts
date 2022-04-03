@@ -1,6 +1,8 @@
 import { Observable } from "../observable";
 import { Subject } from "../subject";
 import { OperatorFunction } from "../types";
+import { EventEmitter } from "events";
+import { promisify } from "../utils";
 
 const windowCount: <T>(
   bufferSize: number,
@@ -8,13 +10,16 @@ const windowCount: <T>(
 ) => OperatorFunction<T, Observable<T>> =
   <T>(bufferSize: number, bufferEvery?: number) =>
   (input: Observable<T>) => {
-    return new Observable<Observable<T>>(async function* (throwError: (error: any) => void) {
+    return new Observable<Observable<T>>(async function* (
+      throwError: (error: any) => void
+    ) {
       let count = 1;
       let passed = bufferEvery;
       let innerSubject = new Subject<T>();
-      yield innerSubject;
+      yield innerSubject
       try {
         for await (const elem of input.subscribe()) {
+          console.log(elem)
           if (passed && passed > 0) {
             passed -= 1;
             continue;
