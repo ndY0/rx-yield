@@ -47,6 +47,9 @@ import { elementAt } from "./operators/elementAt";
 import { expand } from "./operators/expand";
 import { find } from "./operators/find";
 import { isEmpty } from "./operators/isEmpty";
+import { onErrorResumeNext } from "./operators/onErrorResumeNext";
+import { raceWith } from "./operators/raceWith";
+import { repeat } from "./operators/repeat";
 
 const subject = new Subject<string>();
 const obs = new Observable<number>(async function* (
@@ -56,13 +59,13 @@ const obs = new Observable<number>(async function* (
   for (let index = 0; index < 10; index++) {
     // let shouldThrow = false;
     // console.log(index);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 400));
+    console.log("first one !")
     // if(index === 3) {
-      // throwError(new Error("hu source ?"))
+    // throwError(new Error("hu source ?"))
     // }
 
-    
-      // yield Math.ceil(index/10) * 10;
+    // yield Math.ceil(index/10) * 10;
     yield index;
   }
   // if (index === 64) {
@@ -85,7 +88,39 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  isEmpty()
+  repeat(2)
+  // raceWith(
+  //   new Observable<number>(async function* (throwError: (error: any) => void) {
+  //     for (let index = 0; index < 10; index++) {
+  //       await new Promise<void>((resolve) => setTimeout(() => resolve(), 400));
+  //       console.log("second one !")
+  //       throwError(new Error("hu source ?"))
+  //       if(index === 3) {
+  //         }
+  //       yield index;
+  //     }
+  //   }),
+  //   new Observable<string>(async function* (throwError: (error: any) => void) {
+  //     for (let index = 0; index < 10; index++) {
+  //       console.log("third one !")
+  //       if(index === 3) {
+  //         throwError(new Error("hu source ?"))
+  //         }
+  //       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+  //       yield `${index}`;
+  //     }
+  //   }),
+  //   new Observable<number>(async function* (throwError: (error: any) => void) {
+  //     for (let index = 0; index < 10; index++) {
+  //       await new Promise<void>((resolve) => setTimeout(() => resolve(), 400));
+  //       console.log("fourth one !")
+  //       // if(index === 3) {
+  //       //   throwError(new Error("hu source ?"))
+  //       //   }
+  //       yield index;
+  //     }
+  //   })
+  // )
   // windowCount(10, 0),
   // switchAll(),
   // zipAll()
@@ -93,10 +128,10 @@ const obs = new Observable<number>(async function* (
   // share(false)
   // bufferWhen(
   //   () =>
-      // new Observable<number>(async function* () {
-      //   await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-      //   yield 0;
-      // })
+  // new Observable<number>(async function* () {
+  //   await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+  //   yield 0;
+  // })
   // )
 );
 
