@@ -44,23 +44,26 @@ import { concatWith } from "./operators/concatWith";
 import { debounce } from "./operators/debounce";
 import { distinct } from "./operators/distinct";
 import { elementAt } from "./operators/elementAt";
+import { expand } from "./operators/expand";
+import { find } from "./operators/find";
+import { isEmpty } from "./operators/isEmpty";
 
 const subject = new Subject<string>();
 const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 0; index < 100; index++) {
+  for (let index = 0; index < 10; index++) {
     // let shouldThrow = false;
     // console.log(index);
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-    // if(index === 54) {
-    //   throwError(new Error("hu source ?"))
+    // if(index === 3) {
+      // throwError(new Error("hu source ?"))
     // }
 
     
-      yield Math.ceil(index/10) * 10;
-    // yield index;
+      // yield Math.ceil(index/10) * 10;
+    yield index;
   }
   // if (index === 64) {
   // // yield ''
@@ -82,7 +85,7 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  elementAt(110, {test: true})
+  isEmpty()
   // windowCount(10, 0),
   // switchAll(),
   // zipAll()
@@ -90,10 +93,10 @@ const obs = new Observable<number>(async function* (
   // share(false)
   // bufferWhen(
   //   () =>
-  //     new Observable<number>(async function* () {
-  //       await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-  //       yield 0;
-  //     })
+      // new Observable<number>(async function* () {
+      //   await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+      //   yield 0;
+      // })
   // )
 );
 

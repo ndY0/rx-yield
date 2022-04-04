@@ -147,7 +147,7 @@ export class Observable<T> {
     while (runningRead) {
       const data = buffer.read();
       observer.emit("resume");
-      if (data) {
+      if (data !== undefined) {
         yield data;
       } else {
         if (runningWrite) {
@@ -156,7 +156,7 @@ export class Observable<T> {
             errorPromise,
           ]);
           const dataNext = buffer.read();
-          if (dataNext) {
+          if (dataNext !== undefined) {
             yield dataNext;
           }
         } else {
