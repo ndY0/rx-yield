@@ -1,17 +1,16 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const switchScan: <T, R>(
-  accumulator: (acc: R, curr: T) => Observable<R>, seed: R
+const switchMap: <T, R>(
+  project: (curr: T) => Observable<R>
 ) => OperatorFunction<T, R> =
-  <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: R) =>
+  <T, R>(project: (curr: T) => Observable<R>) =>
   (input: Observable<T>) => {
     return new Observable<R>(async function* (
       throwError: (error: any) => void
     ) {
       let innerRunning = true;
       let outterRunning = true;
-      let accumulated: R = seed;
       let innerRunner: AsyncGenerator<Awaited<R>, void, unknown> | undefined =
         undefined;
       let innerPromise: Promise<any> | undefined = undefined;
@@ -27,7 +26,6 @@ const switchScan: <T, R>(
               innerPromise = undefined;
             }
             if (res.value !== undefined) {
-              accumulated = res.value; 
               innerValue = res.value;
             }
           })
@@ -39,7 +37,7 @@ const switchScan: <T, R>(
       };
       const forkInner = async (outterValue: T) => {
         innerRunning = true;
-        innerRunner = accumulator(accumulated, outterValue).subscribe();
+        innerRunner = project(outterValue).subscribe();
       };
       const runOutter = (runner: AsyncGenerator<Awaited<T>, void, unknown>) => {
         outterPromise = runner
@@ -87,4 +85,4 @@ const switchScan: <T, R>(
     });
   };
 
-export { switchScan };
+export { switchMap };

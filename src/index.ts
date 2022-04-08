@@ -9,13 +9,12 @@ import { throttle } from "./operators/throttle";
 // import { throwError } from "./operators/throwError";
 import { EventEmitter } from "events";
 import { IBuffer } from "./interfaces/buffer.interface";
-import { mergeMap } from "./operators/mergeMap";
+import { concatMap } from "./operators/concatMap";
 import { first } from "./operators/first";
 import { bufferCount } from "./operators/bufferCount";
 import { audit } from "./operators/audit";
 import { bufferWhen } from "./operators/bufferWhen";
 import { concatMapTo } from "./operators/concatMapTo";
-import { count } from "./operators/count";
 import { defaultIfEmpty } from "./operators/defaultIfEmpty";
 import { Subject } from "./subject";
 import { bufferTime } from "./operators/bufferTime";
@@ -50,18 +49,27 @@ import { isEmpty } from "./operators/isEmpty";
 import { onErrorResumeNext } from "./operators/onErrorResumeNext";
 import { raceWith } from "./operators/raceWith";
 import { repeat } from "./operators/repeat";
+import { retryWhen } from "./operators/retryWhen";
+import { mapTo } from "./operators/mapTo";
+import { throwError } from "./operators/throwError";
+import { scan } from "./operators/scan";
+import { skipLast } from "./operators/skipLast";
+import { startWith } from "./operators/startWith";
+import { switchMap } from "./operators/switchMap";
+import { mergeMap } from "./operators/mergeMap";
+import { throttleTime } from "./operators/throttleTime";
 
+let count = 0;
 const subject = new Subject<string>();
 const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 0; index < 10; index++) {
+  for (let index = 1; index < 100; index++) {
     // let shouldThrow = false;
     // console.log(index);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 400));
-    console.log("first one !")
-    // if(index === 3) {
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+    // if(index === 7) {
     // throwError(new Error("hu source ?"))
     // }
 
@@ -88,7 +96,10 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  repeat(2)
+  throttle((elem) => new Observable(async function*() {
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), elem * 100));
+    yield elem
+  }))
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {
@@ -134,7 +145,6 @@ const obs = new Observable<number>(async function* (
   // })
   // )
 );
-
 const test = async (id: number) => {
   try {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
@@ -144,6 +154,8 @@ const test = async (id: number) => {
       if (elem === undefined) {
         break;
       }
+      count += 1;
+      console.log(count);
       console.log(`in consumer ${id} : `, elem);
     }
   } catch (e) {

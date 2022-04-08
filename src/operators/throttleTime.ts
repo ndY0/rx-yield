@@ -1,15 +1,14 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const throttle: <T>(durationSelector: (elem: T) => Observable<any>) => OperatorFunction<T, T> =
-  <T>(durationSelector: (elem: T) => Observable<any>) =>
+const throttleTime: <T>(throttle: number) => OperatorFunction<T, T> =
+  <T>(throttle: number) =>
   (input: Observable<T>) => {
     return new Observable<T>(async function* (
       throwError: (error: any) => void
     ) {
       let currentValue: T | undefined = undefined;
       let promise: Promise<any> | undefined = undefined;
-      let throttleRunner:  AsyncGenerator<any, void, unknown> | undefined = undefined;
       let shouldWaitNext = false;
       let running = true;
       const run = (runner: AsyncGenerator<Awaited<T>, void, unknown>) => {
@@ -21,7 +20,6 @@ const throttle: <T>(durationSelector: (elem: T) => Observable<any>) => OperatorF
             }
             if (res.value !== undefined) {
               currentValue = res.value;
-              throttleRunner = durationSelector(res.value).subscribe();
               run(runner);
             }
           })
@@ -39,9 +37,9 @@ const throttle: <T>(durationSelector: (elem: T) => Observable<any>) => OperatorF
       }
       while (running) {
         if(shouldWaitNext) {
-          if(throttleRunner !== undefined) {
-            await (throttleRunner as any).next();
-          }
+          await new Promise<void>((resolve) =>
+            setTimeout(() => resolve(), throttle)
+          );
         } else {
           shouldWaitNext = true;
         }
@@ -56,4 +54,4 @@ const throttle: <T>(durationSelector: (elem: T) => Observable<any>) => OperatorF
     });
   };
 
-export { throttle };
+export { throttleTime };

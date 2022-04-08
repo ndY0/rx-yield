@@ -9,7 +9,6 @@ export class Observable<T> {
   protected innerError: any | undefined = undefined;
   private throwError: (error: any) => void;
   protected readonly emitter = new EventEmitter();
-  test = undefined;
   private readonly factory: (
     throwError: (error: any) => void
   ) => AsyncGenerator<T, void, void>;

@@ -1,11 +1,11 @@
 import { Observable } from "../observable";
 
-const throwError: <E extends Error>(factory: () => E) => Observable<void> = <
+const throwError: <E extends Error>(factory: () => E) => Observable<any> = <
   E extends Error
 >(
   factory: () => E
 ) =>
-  new Observable<void>(async function* (throwError: (error: any) => void) {
+  new Observable<any>(async function* (throwError: (error: any) => void) {
     throwError(factory());
   });
 
