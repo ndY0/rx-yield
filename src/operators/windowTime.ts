@@ -2,24 +2,15 @@ import { Observable } from "../observable";
 import { Subject } from "../subject";
 import { OperatorFunction } from "../types";
 
-const windowWhen: <T>(
-  factory: () => Observable<any>
+const windowTime: <T>(
+  windowTimeSpan: number
 ) => OperatorFunction<T, Observable<T>> =
-  <T>(factory: () => Observable<any>) =>
+  <T>(windowTimeSpan: number) =>
   (input: Observable<T>) => {
     return new Observable<Observable<T>>(async function* (throwError: (error: any) => void) {
       let innerSubject = new Subject<T>();
       let flush = false;
       let promise: Promise<any> | undefined = undefined;
-      const runInner = (runner: AsyncGenerator<any, void, unknown>, resolve: (value: void | PromiseLike<void>) => void) => {
-        runner.next().then((res) => {
-          if(res.done) {
-            resolve();
-          } else {
-            runInner(runner, resolve);
-          }
-        })
-      }
       yield innerSubject;
       try {
         for await (const elem of input.subscribe()) {
@@ -32,10 +23,8 @@ const windowWhen: <T>(
           }
           if (elem !== undefined) {
             if (!promise) {
-              const inner = factory()
-              .subscribe();
               promise = new Promise<void>((resolve) => {
-                runInner(inner, resolve)
+                setTimeout(() => resolve(), windowTimeSpan)
               }).then((res) => {
                   flush = true;
                 });
@@ -53,4 +42,4 @@ const windowWhen: <T>(
     });
   };
 
-export { windowWhen };
+export { windowTime };

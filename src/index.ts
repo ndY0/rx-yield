@@ -58,6 +58,15 @@ import { startWith } from "./operators/startWith";
 import { switchMap } from "./operators/switchMap";
 import { mergeMap } from "./operators/mergeMap";
 import { throttleTime } from "./operators/throttleTime";
+import { timeout } from "./operators/timeout";
+import { toArray } from "./operators/toArray";
+import { windowTime } from "./operators/windowTime";
+import { withLatestFrom } from "./operators/withLatestFrom";
+import { zipWith } from "./operators/zipWith";
+import { buffer } from "./operators/buffer";
+import { bufferToggle } from "./operators/bufferToggle";
+import { combineLatestWith } from "./operators/combineLatestWith";
+import { debounceTime } from "./operators/debounceTime";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -65,13 +74,13 @@ const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 1; index < 100; index++) {
+  for (let index = 1; index < 20; index++) {
     // let shouldThrow = false;
     // console.log(index);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-    // if(index === 7) {
-    // throwError(new Error("hu source ?"))
-    // }
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), index * 100));
+    if(index === 7) {
+    throwError(new Error("hu source ?"))
+    }
 
     // yield Math.ceil(index/10) * 10;
     yield index;
@@ -96,10 +105,7 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  throttle((elem) => new Observable(async function*() {
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), elem * 100));
-    yield elem
-  }))
+  debounceTime(400)
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {
