@@ -1,70 +1,86 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const exhaustMap: <T, E>(
-  factory: (element: T) => Observable<E>
-) => OperatorFunction<T, E> =
-  <T, E>(factory: (element: T) => Observable<E>) =>
+const exhaustMap: <T, R>(project: (value: T) => Observable<R>) => OperatorFunction<T, R> =
+  <T, R>(project: (value: T) => Observable<R>) =>
   (input: Observable<T>) => {
-    return new Observable<E>(async function* (
+    return new Observable<R>(async function* (
       throwError: (error: any) => void
     ) {
-      let isRunningOutter = true;
-      let isRunningInner = true;
-      let outterCurrentValue: T | undefined = undefined;
-      let runningOutter:
-        | Promise<IteratorResult<Awaited<T> | undefined, void>>
-        | undefined = undefined;
-      let runningOutterDone = false;
-      const outter = input.subscribe();
-      const outterPromise = outter.next();
-      outterPromise.catch((e) => throwError(e));
-      const { done, value } = await outterPromise;
-      if (!done && value !== undefined) {
-        outterCurrentValue = value;
-        while (isRunningOutter) {
-          const innerRunner = factory(outterCurrentValue).subscribe();
-          const outterPromise = outter.next();
-          outterPromise.catch((e) => throwError(e));
-          runningOutter = outterPromise.then(
-            (next: IteratorResult<Awaited<T> | undefined, void>) => {
-              if (next.value) {
-                outterCurrentValue = next.value;
+      let innerRunning = false;
+      let outterRunning = true;
+      let innerRunner: AsyncGenerator<Awaited<R>, void, unknown> | undefined =
+        undefined;
+      let innerPromise: Promise<any> | undefined = undefined;
+      let outterPromise: Promise<any> | undefined = undefined;
+      let innerValue: T | undefined = undefined;
+      const runInner = (runner: AsyncGenerator<Awaited<T>, void, unknown>) => {
+        innerPromise = runner
+          .next()
+          .then((res) => {
+            if (res.done) {
+              innerRunning = false;
+              innerRunner = undefined;
+              innerPromise = undefined;
+            }
+            if (res.value !== undefined) {
+              innerValue = res.value;
+            }
+          })
+          .catch((e) => {
+            innerRunning = false;
+            outterRunning = false;
+            throwError(e);
+          });
+      };
+      const forkInner = async (outterValue: Observable<R>) => {
+        innerRunning = true;
+        innerRunner = outterValue.subscribe();
+      };
+      const runOutter = (
+        runner: AsyncGenerator<Awaited<T>, void, unknown>
+      ) => {
+        outterPromise = runner
+          .next()
+          .then((res) => {
+            if (res.done) {
+              outterRunning = false;
+              outterPromise = undefined;
+            }
+            if (res.value !== undefined) {
+              if (!innerRunning) {
+                forkInner(project(res.value));
               }
-              if (next.done) {
-                isRunningOutter = false;
-              }
-              runningOutterDone = true;
-              return next;
+              runOutter(runner);
             }
-          );
-          while (isRunningInner) {
-            const innerPromise = innerRunner.next();
-            innerPromise.catch((e) => throwError(e));
-            const innerValue = await innerPromise;
-            if (runningOutterDone) {
-              const outterPromise = outter.next();
-              outterPromise.catch((e) => throwError(e));
-              runningOutter = outterPromise.then(
-                (next: IteratorResult<Awaited<T> | undefined, void>) => {
-                  if (next.value) {
-                    outterCurrentValue = next.value;
-                  }
-                  if (next.done) {
-                    isRunningOutter = false;
-                  }
-                  runningOutterDone = true;
-                  return next;
-                }
-              );
-            }
-            if (innerValue.done) {
-              isRunningInner = false;
-            } else {
-              yield innerValue.value as E;
-            }
+          })
+          .catch((e) => {
+            innerRunning = false;
+            outterRunning = false;
+            throwError(e);
+          });
+      };
+      const forkOutter = () => {
+        const outterRunner = input.subscribe();
+        runOutter(outterRunner);
+      };
+      forkOutter();
+      while (innerRunning || outterRunning) {
+        await Promise.any(
+          [outterPromise, innerPromise].filter(
+            (promise) => promise !== undefined
+          )
+        );
+        if (innerValue !== undefined) {
+          yield innerValue;
+          innerValue = undefined;
+          if (innerRunner && innerRunning) {
+            runInner(innerRunner);
           }
-          isRunningInner = true;
+        } else {
+          if (innerRunner && innerRunning) {
+            runInner(innerRunner);
+          }
         }
       }
     });

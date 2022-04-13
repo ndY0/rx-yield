@@ -1,12 +1,11 @@
-import { from } from "../creators/from";
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const mergeMapTo: <T>(
-  innerObs: Observable<T>
-) => OperatorFunction<any, T> =
-  <T>(innerObs: Observable<T>) =>
-  (input: Observable<any>) => {
+const mergeAll: <T>(
+  
+) => OperatorFunction<Observable<T>, T> =
+  <T>() =>
+  (input: Observable<Observable<T>>) => {
     return new Observable<T>(async function* (
       throwError: (error: any) => void
     ) {
@@ -47,13 +46,13 @@ const mergeMapTo: <T>(
             })
         );
       };
-      const forkInner = async (index: number) => {
+      const forkInner = async (outterValue: Observable<T>, index: number) => {
         innerRunning.set(index, true);
-        innerRunner.set(index, from(innerObs).subscribe());
+        innerRunner.set(index, outterValue.subscribe());
         innerPromise.set(index, undefined);
         innerValue.set(index, undefined);
       };
-      const runOutter = (runner: AsyncGenerator<Awaited<T>, void, unknown>) => {
+      const runOutter = (runner: AsyncGenerator<Awaited<Observable<T>>, void, unknown>) => {
         outterPromise = runner
           .next()
           .then((res) => {
@@ -63,7 +62,7 @@ const mergeMapTo: <T>(
             }
             if (res.value !== undefined) {
               count += 1;
-              forkInner(count);
+              forkInner(res.value, count);
               runOutter(runner);
             }
           })
@@ -108,4 +107,4 @@ const mergeMapTo: <T>(
     });
   };
 
-export { mergeMapTo };
+export { mergeAll };

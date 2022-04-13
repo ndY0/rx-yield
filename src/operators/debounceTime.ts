@@ -23,7 +23,6 @@ const debounceTime: <T>(
           if(result.value !== undefined) {
             current = result.value;
             innerPromise = new Promise<void>((resolve) => setTimeout(() => resolve(), dueTime)).then(() => {
-              console.log("been there !")
               return {inner: true}
             }).catch(() => {
               return {inner: true, error: true}

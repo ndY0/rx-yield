@@ -67,6 +67,18 @@ import { buffer } from "./operators/buffer";
 import { bufferToggle } from "./operators/bufferToggle";
 import { combineLatestWith } from "./operators/combineLatestWith";
 import { debounceTime } from "./operators/debounceTime";
+import { delayWhen } from "./operators/delayWhen";
+import { distinctUntilChanged } from "./operators/distinctUntilChanged";
+import { exhaustAll } from "./operators/exhaustAll";
+import { mergeMapTo } from "./operators/mergeMapTo";
+import { filter } from "./operators/filter";
+import { materialize } from "./operators/materialize";
+import { dematerialize } from "./operators/dematerialize";
+import { mergeAll } from "./operators/mergeAll";
+import { mergeScan } from "./operators/mergeScan";
+import { pairwise } from "./operators/pairwise";
+import { reduce } from "./operators/reduce";
+import { repeatWhen } from "./operators/repeatWhen";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -74,15 +86,22 @@ const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 1; index < 20; index++) {
+  for (let index = 1; index < 10; index++) {
     // let shouldThrow = false;
     // console.log(index);
-    await new Promise<void>((resolve) => setTimeout(() => resolve(), index * 100));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
     if(index === 7) {
     throwError(new Error("hu source ?"))
     }
 
     // yield Math.ceil(index/10) * 10;
+    // yield new Observable(async function* (throwError: (error: any) => void) {
+      
+    //   for (let index2 = 0; index2 < 10; index2++) {
+    //     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
+    //     yield index
+    //   }
+    // })
     yield index;
   }
   // if (index === 64) {
@@ -105,7 +124,7 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  debounceTime(400)
+  repeatWhen((notification) => notification)
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {
@@ -156,7 +175,7 @@ const test = async (id: number) => {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
     console.log("start !");
     for await (const elem of obs.subscribe()) {
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
+      // await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
       if (elem === undefined) {
         break;
       }

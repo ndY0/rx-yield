@@ -1,27 +1,28 @@
-import { from } from "../creators/from";
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const mergeMapTo: <T>(
-  innerObs: Observable<T>
-) => OperatorFunction<any, T> =
-  <T>(innerObs: Observable<T>) =>
-  (input: Observable<any>) => {
-    return new Observable<T>(async function* (
+const mergeScan: <T, R>(
+  accumulator: (acc: R, curr: T) => Observable<R>,
+  seed: R
+) => OperatorFunction<T, R> =
+  <T, R>(accumulator: (acc: R, curr: T) => Observable<R>, seed: R) =>
+  (input: Observable<T>) => {
+    return new Observable<R>(async function* (
       throwError: (error: any) => void
     ) {
       let count = 0;
+      let accumulated: R = seed;
       const innerRunning: Map<number, boolean> = new Map();
       let outterRunning = true;
       const innerRunner: Map<
         number,
-        AsyncGenerator<Awaited<T>, void, unknown>
+        AsyncGenerator<Awaited<R>, void, unknown>
       > = new Map();
       const innerPromise: Map<number, Promise<any> | undefined> = new Map();
       let outterPromise: Promise<any> | undefined = undefined;
-      const innerValue: Map<number, T | undefined> = new Map();
+      const innerValue: Map<number, R | undefined> = new Map();
       const runInner = (
-        runner: AsyncGenerator<Awaited<T>, void, unknown>,
+        runner: AsyncGenerator<Awaited<R>, void, unknown>,
         index: number
       ) => {
         innerPromise.set(
@@ -47,9 +48,9 @@ const mergeMapTo: <T>(
             })
         );
       };
-      const forkInner = async (index: number) => {
+      const forkInner = async (outterValue: T, index: number) => {
         innerRunning.set(index, true);
-        innerRunner.set(index, from(innerObs).subscribe());
+        innerRunner.set(index, accumulator(accumulated, outterValue).subscribe());
         innerPromise.set(index, undefined);
         innerValue.set(index, undefined);
       };
@@ -63,7 +64,7 @@ const mergeMapTo: <T>(
             }
             if (res.value !== undefined) {
               count += 1;
-              forkInner(count);
+              forkInner(res.value, count);
               runOutter(runner);
             }
           })
@@ -80,26 +81,41 @@ const mergeMapTo: <T>(
         runOutter(outterRunner);
       };
       forkOutter();
-      while (Array.from(innerRunning.values()).reduce((acc, curr) => acc || curr, false) || outterRunning) {
+      while (
+        Array.from(innerRunning.values()).reduce(
+          (acc, curr) => acc || curr,
+          false
+        ) ||
+        outterRunning
+      ) {
         await Promise.any(
-          [outterPromise, ...Array.from(innerPromise.values()).filter((promise) => promise !== undefined)].filter(
-            (promise) => promise !== undefined
-          )
+          [
+            outterPromise,
+            ...Array.from(innerPromise.values()).filter(
+              (promise) => promise !== undefined
+            ),
+          ].filter((promise) => promise !== undefined)
         );
         for (const [index, elem] of Array.from(innerValue.entries())) {
-          
-          if (elem !== undefined) {
+          if (elem !== undefined) {;
+            accumulated = elem
             yield elem;
-            if(innerRunning.get(index) === undefined) {
-              innerValue.delete(index)  
+            if (innerRunning.get(index) === undefined) {
+              innerValue.delete(index);
             } else {
               innerValue.set(index, undefined);
             }
-            if (innerRunner.get(index) !== undefined && innerRunning.get(index)) {
+            if (
+              innerRunner.get(index) !== undefined &&
+              innerRunning.get(index)
+            ) {
               runInner(innerRunner.get(index) as any, index);
             }
           } else {
-            if (innerRunner.get(index) !== undefined && innerRunning.get(index)) {
+            if (
+              innerRunner.get(index) !== undefined &&
+              innerRunning.get(index)
+            ) {
               runInner(innerRunner.get(index) as any, index);
             }
           }
@@ -108,4 +124,4 @@ const mergeMapTo: <T>(
     });
   };
 
-export { mergeMapTo };
+export { mergeScan };

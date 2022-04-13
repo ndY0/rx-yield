@@ -10,11 +10,8 @@ const mergeMap: <T, R>(
       throwError: (error: any) => void
     ) {
       let count = 0;
-      // let innerRunning = true;
       const innerRunning: Map<number, boolean> = new Map();
       let outterRunning = true;
-      // let innerRunner: AsyncGenerator<Awaited<R>, void, unknown> | undefined =
-      //   undefined;
       const innerRunner: Map<
         number,
         AsyncGenerator<Awaited<R>, void, unknown>
@@ -90,7 +87,7 @@ const mergeMap: <T, R>(
         );
         for (const [index, elem] of Array.from(innerValue.entries())) {
           
-          if (elem) {
+          if (elem !== undefined) {
             yield elem;
             if(innerRunning.get(index) === undefined) {
               innerValue.delete(index)  

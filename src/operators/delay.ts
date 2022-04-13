@@ -11,7 +11,7 @@ const delay: <T>(timeout: number | Date) => OperatorFunction<T, T> =
           typeof timeout === "number"
             ? timeout
             : Math.round(
-                Math.max(new Date().getTime() - timeout.getTime(), 0) / 1000
+                Math.max(new Date().getTime() - timeout.getTime(), 0)
               )
         )
       );

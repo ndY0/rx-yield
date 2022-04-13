@@ -1,15 +1,13 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const switchAll: <T>(
-  
-) => OperatorFunction<Observable<T>, T> =
+const exhaustAll: <T>() => OperatorFunction<Observable<T>, T> =
   <T>() =>
   (input: Observable<Observable<T>>) => {
     return new Observable<T>(async function* (
       throwError: (error: any) => void
     ) {
-      let innerRunning = true;
+      let innerRunning = false;
       let outterRunning = true;
       let innerRunner: AsyncGenerator<Awaited<T>, void, unknown> | undefined =
         undefined;
@@ -22,7 +20,7 @@ const switchAll: <T>(
           .then((res) => {
             if (res.done) {
               innerRunning = false;
-              innerValue = undefined;
+              innerRunner = undefined;
               innerPromise = undefined;
             }
             if (res.value !== undefined) {
@@ -39,7 +37,9 @@ const switchAll: <T>(
         innerRunning = true;
         innerRunner = outterValue.subscribe();
       };
-      const runOutter = (runner: AsyncGenerator<Awaited<Observable<T>>, void, unknown>) => {
+      const runOutter = (
+        runner: AsyncGenerator<Awaited<Observable<T>>, void, unknown>
+      ) => {
         outterPromise = runner
           .next()
           .then((res) => {
@@ -48,8 +48,9 @@ const switchAll: <T>(
               outterPromise = undefined;
             }
             if (res.value !== undefined) {
-              innerValue = undefined;
-              forkInner(res.value);
+              if (!innerRunning) {
+                forkInner(res.value);
+              }
               runOutter(runner);
             }
           })
@@ -70,9 +71,9 @@ const switchAll: <T>(
             (promise) => promise !== undefined
           )
         );
-        if (innerValue) {
+        if (innerValue !== undefined) {
           yield innerValue;
-          innerValue === undefined;
+          innerValue = undefined;
           if (innerRunner && innerRunning) {
             runInner(innerRunner);
           }
@@ -85,4 +86,4 @@ const switchAll: <T>(
     });
   };
 
-export { switchAll };
+export { exhaustAll };
