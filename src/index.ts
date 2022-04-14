@@ -79,6 +79,14 @@ import { mergeScan } from "./operators/mergeScan";
 import { pairwise } from "./operators/pairwise";
 import { reduce } from "./operators/reduce";
 import { repeatWhen } from "./operators/repeatWhen";
+import { sample } from "./operators/sample";
+import { sequenceEqual } from "./operators/sequenceEqual";
+import { single } from "./operators/single";
+import { skipUntil } from "./operators/skipUntil";
+import { switchMapTo } from "./operators/switchMapTo";
+import { takeLast } from "./operators/takeLast";
+import { throwIfEmpty } from "./operators/throwIfEmpty";
+import { window } from "./operators/window";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -86,13 +94,13 @@ const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 1; index < 10; index++) {
+  for (let index = 1; index < 50; index++) {
     // let shouldThrow = false;
     // console.log(index);
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-    if(index === 7) {
-    throwError(new Error("hu source ?"))
-    }
+    // if(index === 7) {
+    // throwError(new Error("hu source ?"))
+    // }
 
     // yield Math.ceil(index/10) * 10;
     // yield new Observable(async function* (throwError: (error: any) => void) {
@@ -124,7 +132,16 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  repeatWhen((notification) => notification)
+  window(new Observable(async function*(throwError: (error: any) => void){
+    for (let index = 0; index < 200; index++) {
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 300));
+      if(index === 7) {
+        throwError(new Error("hu source ?"))
+        }
+      yield index 
+    }
+  })),
+  mergeAll()
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {

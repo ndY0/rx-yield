@@ -1,8 +1,8 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
 
-const sampleTime: <T>(period: number) => OperatorFunction<T, T> =
-  <T>(period: number) =>
+const sample: <T>(notifier: Observable<any>) => OperatorFunction<T, T> =
+  <T>(notifier: Observable<any>) =>
   (input: Observable<T>) => {
     return new Observable<T>(async function* (
       throwError: (error: any) => void
@@ -18,7 +18,7 @@ const sampleTime: <T>(period: number) => OperatorFunction<T, T> =
             if (res.done) {
               runningInner = false;
             }
-            if (res.value !== undefined) {
+            if (res.value !== undefined && runningSampler) {
               sample = res.value;
               runInner(runner);
             }
@@ -32,16 +32,17 @@ const sampleTime: <T>(period: number) => OperatorFunction<T, T> =
       const forkInner = () => {
         runInner(input.subscribe());
       };
-      const runOutter = () => {
-        promise = new Promise<void>((resolve) => {
-          setTimeout(() => {
-            resolve();
-          }, period);
-        })
-          .then(() => {
-            if (runningInner) {
-              runOutter();
-            } else {
+      const runOutter = (runner: AsyncGenerator<any, void, unknown>) => {
+        promise = runner.next()
+          .then((res) => {
+            if(res.done) {
+              runningInner = false;
+              runningSampler = false;
+            }
+            if (runningInner && res.value !== undefined) {
+              runOutter(runner);
+            }
+            if(!runningInner) {
               runningSampler = false;
             }
           })
@@ -52,7 +53,7 @@ const sampleTime: <T>(period: number) => OperatorFunction<T, T> =
           });
       };
       const forOutter = () => {
-        runOutter();
+        runOutter(notifier.subscribe());
       };
       forkInner();
       forOutter();
@@ -66,4 +67,4 @@ const sampleTime: <T>(period: number) => OperatorFunction<T, T> =
     });
   };
 
-export { sampleTime };
+export { sample };

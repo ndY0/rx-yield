@@ -40,7 +40,6 @@ const repeatWhen: <T>(
         run();
         while (running) {
           await runnerPromise;
-          console.log(running, runnerPromise, currentValue)
           if (currentValue !== undefined && error === undefined) {
             lastValue = currentValue;
             yield currentValue;
@@ -54,13 +53,10 @@ const repeatWhen: <T>(
             running = false;
             completionSubject.complete();
           }
-          console.log(currentValue, error)
           if(currentValue === undefined && error === undefined) {
-            console.log(lastValue)
             await completionSubject.next(lastValue as T);
             try {
               const next = await notifierRunner.next();
-              console.log("next value", next)
               if (next.done) {
                 running = false;
                 completionSubject.complete();
