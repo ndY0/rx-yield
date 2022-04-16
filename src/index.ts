@@ -87,6 +87,8 @@ import { switchMapTo } from "./operators/switchMapTo";
 import { takeLast } from "./operators/takeLast";
 import { throwIfEmpty } from "./operators/throwIfEmpty";
 import { window } from "./operators/window";
+import { windowToggle } from "./operators/windowToggle";
+import { from } from "./creators/from";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -94,11 +96,11 @@ const obs = new Observable<number>(async function* (
   throwError: (error: any) => void
 ) {
   // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
-  for (let index = 1; index < 50; index++) {
+  for (let index = 1; index < 200; index++) {
     // let shouldThrow = false;
     // console.log(index);
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
-    // if(index === 7) {
+    // if(index === 20) {
     // throwError(new Error("hu source ?"))
     // }
 
@@ -132,15 +134,15 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  window(new Observable(async function*(throwError: (error: any) => void){
+  windowToggle(new Observable(async function*(throwError: (error: any) => void){
     for (let index = 0; index < 200; index++) {
       await new Promise<void>((resolve) => setTimeout(() => resolve(), 300));
-      if(index === 7) {
-        throwError(new Error("hu source ?"))
-        }
+      // if(index === 7) {
+      //   throwError(new Error("hu source ?"))
+      //   }
       yield index 
     }
-  })),
+  }), (elem: number) => from([elem]).pipe(delay(400), mergeMap(() => throwError(() => new Error("hu source ?"))))),
   mergeAll()
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {

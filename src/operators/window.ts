@@ -17,7 +17,6 @@ const window: <T>(
       const runInner = (runner: AsyncGenerator<any, void, unknown>) => {
         promise = runner.next().then((res) => {
           flush = true;
-          console.log(res, running)
           if (!res.done && running) {
             runInner(runner);
           }
