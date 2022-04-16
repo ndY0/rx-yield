@@ -89,6 +89,13 @@ import { throwIfEmpty } from "./operators/throwIfEmpty";
 import { window } from "./operators/window";
 import { windowToggle } from "./operators/windowToggle";
 import { from } from "./creators/from";
+import { lastValueFrom } from "./casters/lastValueFrom";
+import { onEvery } from "./casters/onEvery";
+import { range } from "./creators/range";
+import { of } from "./creators/of";
+import { interval } from "./creators/interval";
+import { generate } from "./creators/generate";
+import { fromEventEmitter } from "./creators/fromEventEmitter";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -106,7 +113,7 @@ const obs = new Observable<number>(async function* (
 
     // yield Math.ceil(index/10) * 10;
     // yield new Observable(async function* (throwError: (error: any) => void) {
-      
+
     //   for (let index2 = 0; index2 < 10; index2++) {
     //     await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
     //     yield index
@@ -134,15 +141,22 @@ const obs = new Observable<number>(async function* (
   //   }
   // });
 }).pipe(
-  windowToggle(new Observable(async function*(throwError: (error: any) => void){
-    for (let index = 0; index < 200; index++) {
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 300));
-      // if(index === 7) {
-      //   throwError(new Error("hu source ?"))
-      //   }
-      yield index 
-    }
-  }), (elem: number) => from([elem]).pipe(delay(400), mergeMap(() => throwError(() => new Error("hu source ?"))))),
+  windowToggle(
+    new Observable(async function* (throwError: (error: any) => void) {
+      for (let index = 0; index < 200; index++) {
+        await new Promise<void>((resolve) => setTimeout(() => resolve(), 300));
+        // if(index === 7) {
+        //   throwError(new Error("hu source ?"))
+        //   }
+        yield index;
+      }
+    }),
+    (elem: number) =>
+      from([elem]).pipe(
+        delay(400),
+        mergeMap(() => throwError(() => new Error("hu source ?")))
+      )
+  ),
   mergeAll()
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
@@ -232,6 +246,23 @@ const runSubject = async () => {
   }
 };
 
-test(1);
+const testCreators = async () => {
+  const emitter = new EventEmitter();
+  onEvery(
+    fromEventEmitter<{foo: string}>(emitter, "foo")
+      // delay(2000),
+      // mergeMap(() => throwError(() => new Error("test")))
+    ,
+    {
+      next: (elem) => console.log(elem),
+      error: (e) => console.log(e),
+      complete: () => console.log("completed ! ")
+    }
+  );
+  setInterval(() => {emitter.emit("foo", {foo: "bar"})}, 200)
+};
+
+// test(1);
 // testbis(2);
 // runSubject();
+testCreators();
