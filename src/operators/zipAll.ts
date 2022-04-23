@@ -1,6 +1,5 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
-import {inspect} from "util"
 
 function zipAll<T>(): OperatorFunction<Observable<T>, T[]>;
 
@@ -52,17 +51,12 @@ function zipAll<T>(
         for await (const innerSource of input.subscribe()) {
           sources.set(index, innerSource);
           runners.set(index, innerSource.subscribe());
-          console.log(inspect(runners, true, null, true));
-          // console.log(inspect(sources, true, null, true));
           index += 1;
         }
-        console.log("allo ?")
       } catch (e) {
-        console.log(e)
         throwError(e);
         running = false;
       }
-      console.log("here ?")
       await Promise.allSettled(
         Array.from(runners.entries())
           .filter(([_, runner]) => runner !== undefined)

@@ -7,6 +7,8 @@ import { pipeFromArray } from "../utils";
 
 export class Observable<T> {
   protected innerError: any | undefined = undefined;
+  private bufferFactory = () => new FifoBuffer<T>();
+  private backpressureCallback: (value: T) => void = (value: T) => {}
   private throwError: (error: any) => void;
   protected readonly emitter = new EventEmitter();
   private readonly factory: (
@@ -104,7 +106,7 @@ export class Observable<T> {
     this.emitter.once("errored", () => {
       observer.emit("errored");
     });
-    const buffer = new FifoBuffer<T>();
+    const buffer = this.bufferFactory();
     const source = this.factory(this.throwError);
     const errorPromise = new Promise<void>((resolve) =>
       observer.once("errored", () => resolve())
@@ -130,6 +132,7 @@ export class Observable<T> {
           }
           runningWrite = false;
         } else {
+          this.backpressureCallback(data.value);
           const permitted = buffer.write(data.value);
           observer.emit("drain");
           if (!permitted) {

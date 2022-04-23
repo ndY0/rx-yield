@@ -96,6 +96,7 @@ import { of } from "./creators/of";
 import { interval } from "./creators/interval";
 import { generate } from "./creators/generate";
 import { fromEventEmitter } from "./creators/fromEventEmitter";
+import { Sync } from "./mutator/sync.mutator";
 
 let count = 0;
 const subject = new Subject<string>();
@@ -119,6 +120,7 @@ const obs = new Observable<number>(async function* (
     //     yield index
     //   }
     // })
+    console.log(index)
     yield index;
   }
   // if (index === 64) {
@@ -154,10 +156,9 @@ const obs = new Observable<number>(async function* (
     (elem: number) =>
       from([elem]).pipe(
         delay(400),
-        mergeMap(() => throwError(() => new Error("hu source ?")))
       )
   ),
-  mergeAll()
+  Sync(mergeAll, 5, (value) => console.log("mergeAll", value))()
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {
@@ -208,7 +209,7 @@ const test = async (id: number) => {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
     console.log("start !");
     for await (const elem of obs.subscribe()) {
-      // await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
       if (elem === undefined) {
         break;
       }
@@ -262,7 +263,7 @@ const testCreators = async () => {
   setInterval(() => {emitter.emit("foo", {foo: "bar"})}, 200)
 };
 
-// test(1);
+test(1);
 // testbis(2);
 // runSubject();
-testCreators();
+// testCreators();

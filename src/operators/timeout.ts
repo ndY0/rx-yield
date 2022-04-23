@@ -19,7 +19,6 @@ const timeout: <T>(config: number | Date) => OperatorFunction<T, T> =
         promise = runner
           .next()
           .then((res) => {
-            console.log(res, running);
             if (res.done) {
               running = false;
             }
@@ -56,7 +55,6 @@ const timeout: <T>(config: number | Date) => OperatorFunction<T, T> =
               : undefined,
           ].filter((racer) => racer !== undefined)
         );
-        console.log(running, currentValue, promise);
         if (res?.timeout) {
           running = false;
           throwError(new Error(JSON.stringify({ error: "timed out" })));

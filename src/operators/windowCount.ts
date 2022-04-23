@@ -19,7 +19,6 @@ const windowCount: <T>(
       yield innerSubject
       try {
         for await (const elem of input.subscribe()) {
-          console.log(elem)
           if (passed && passed > 0) {
             passed -= 1;
             continue;

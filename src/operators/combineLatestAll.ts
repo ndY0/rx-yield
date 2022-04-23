@@ -1,6 +1,5 @@
 import { Observable } from "../observable";
 import { OperatorFunction } from "../types";
-import {inspect} from "util"
 
 function combineLatestAll<T>(): OperatorFunction<Observable<T>, T[]>;
 
@@ -49,7 +48,6 @@ function combineLatestAll<T>(
             return elem
           })
           .catch((e) => {
-            console.log(e)
             throwError(e);
             running = false;
           }));
