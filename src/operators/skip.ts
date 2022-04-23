@@ -4,7 +4,7 @@ import { OperatorFunction } from "../types";
 const skip: <T>(count: number) => OperatorFunction<T, T | void> =
   <T>(count: number) =>
   (input: Observable<T>) => {
-    return new Observable<T>(async function* (
+    return new Observable<T | void>(async function* (
       throwError: (error: any) => void
     ) {
       let skipped: number = 0;

@@ -8,6 +8,7 @@ const config: Config.InitialOptions = {
     "**/src/**/*.ts",
     "!**/node_modules/**",
     "!**/(types|symbols).ts",
+    "!**/*.d.ts",
   ],
   coverageReporters: ["text", "lcov"],
   collectCoverage: true,
