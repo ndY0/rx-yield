@@ -4,7 +4,8 @@
   "description": "yield style reactive programming librairy",
   "main": "index.ts",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "repository": {
     "type": "git",

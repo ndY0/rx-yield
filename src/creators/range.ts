@@ -1,6 +1,6 @@
 import { Observable } from "../observable";
 
-const range = (from: number, count: number = Infinity) =>
+const range = (from: number, count: number) =>
   new Observable<number>(async function* () {
     let running = true;
     let step = from;
