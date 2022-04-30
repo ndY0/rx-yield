@@ -8,7 +8,7 @@ import { pipeFromArray } from "../utils";
 export class Observable<T> {
   protected innerError: any | undefined = undefined;
   private bufferFactory = () => new FifoBuffer<T>();
-  private backpressureCallback: <T>(value: T) => void = <T>(value: T) => {}
+  protected backpressureCallback: <T>(value: T) => void = <T>(value: T) => {}
   private throwError: (error: any) => void;
   protected readonly emitter = new EventEmitter();
   private readonly factory: (

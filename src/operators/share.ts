@@ -63,7 +63,7 @@ const share: <T>(blocking?: boolean) => OperatorFunction<T, T> = <T>(
       while (running) {
         let data;
         if (blocking) {
-          if (sharedData) {
+          if (sharedData !== undefined) {
             data = sharedData;
           } else {
             emitter.emit("ready");
@@ -78,7 +78,7 @@ const share: <T>(blocking?: boolean) => OperatorFunction<T, T> = <T>(
             emitter.once.bind(emitter)
           )("data");
         }
-        if (data) {
+        if (data !== undefined) {
           yield data;
         } else {
           if (error) {

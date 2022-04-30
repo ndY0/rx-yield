@@ -8,16 +8,12 @@ export class Subject<T> extends PipedObservable<T> {
   private readonly subjectEmitter: EventEmitter;
   private readonly buffer: FifoBuffer<T>;
   private readonly state: { running: boolean; error: any; ended: boolean };
-  constructor() {
+  constructor(bufferSize?: number, consumerBufferSize?: number) {
     const emitter = new EventEmitter();
-    const buffer = new FifoBuffer<T>();
+    const buffer = new FifoBuffer<T>(bufferSize);
     const state = { running: true, error: undefined, ended: false };
     super(async function* (throwError: (error: any) => void) {
       while (state.running) {
-        if (state.error) {
-          throwError(state.error);
-          state.ended = true;
-        } else {
           const data = buffer.read();
           if (data !== undefined) {
             emitter.emit("drain");
@@ -35,9 +31,11 @@ export class Subject<T> extends PipedObservable<T> {
               state.running = false;
             }
           }
-        }
       }
-    }, share());
+    }, share(consumerBufferSize ? true : false));
+    if(consumerBufferSize) {
+      this.backpressureCallback = () => new FifoBuffer<T>(consumerBufferSize);
+    }
     this.subjectEmitter = emitter;
     this.buffer = buffer;
     this.state = state;
@@ -59,9 +57,10 @@ export class Subject<T> extends PipedObservable<T> {
     this.state.running = false;
     this.emitter.emit("errored");
     this.subjectEmitter.emit("resume");
+    this.state.ended = true;
   }
   complete() {
+    this.subjectEmitter.emit("resume");
     this.state.ended = true;
-    // this.subjectEmitter.emit("resume");
   }
 }

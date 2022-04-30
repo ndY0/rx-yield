@@ -142,7 +142,8 @@ const obs = new Observable<number>(async function* (
   //     yield index;
   //   }
   // });
-}).pipe(
+})
+subject.pipe(
   windowToggle(
     new Observable(async function* (throwError: (error: any) => void) {
       for (let index = 0; index < 200; index++) {
@@ -158,7 +159,7 @@ const obs = new Observable<number>(async function* (
         delay(400),
       )
   ),
-  Sync(mergeAll, 5, (value) => console.log("mergeAll", value))()
+  mergeAll()
   // raceWith(
   //   new Observable<number>(async function* (throwError: (error: any) => void) {
   //     for (let index = 0; index < 10; index++) {
@@ -208,8 +209,8 @@ const test = async (id: number) => {
   try {
     // await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
     console.log("start !");
-    for await (const elem of obs.subscribe()) {
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000));
+    for await (const elem of subject.subscribe()) {
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 100));
       if (elem === undefined) {
         break;
       }
@@ -264,6 +265,6 @@ const testCreators = async () => {
 };
 
 test(1);
-// testbis(2);
-// runSubject();
+testbis(2);
+runSubject();
 // testCreators();
