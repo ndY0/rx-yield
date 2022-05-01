@@ -9,6 +9,25 @@ const audit: <T>(
     return new Observable<T>(async function* (throwError: (error: any) => void) {
       let last: T | undefined = undefined;
       let promise: Promise<any> | undefined = undefined;
+      let promiseInner: Promise<any> | undefined = undefined;
+      let running = true;
+      const runOutter = (runner: AsyncGenerator<Awaited<T>, void, unknown>) => {
+        promise = runner.next().then((res) => {
+          if(res.done) {
+            running = false;
+          }
+          if(res.value !== undefined) {
+            last = res.value;
+            runOutter(runner)
+          }
+        }).catch((e) => {
+          throwError(e)
+        })
+      }
+      runOutter(input.subscribe());
+      while(running) {
+        await Promise.any([promise, promiseInner])
+      }
       try {
         for await (const elem of input.subscribe()) {
           if (last) {
